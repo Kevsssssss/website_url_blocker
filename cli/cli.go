@@ -103,12 +103,14 @@ func cmdList() {
 }
 
 func cmdEnable() {
+	requireAdmin()
 	fmt.Println("Applying blocklist to hosts file...")
 	must(blockerservice.ApplyBlocklist())
 	fmt.Println("✓ Blocking enabled. Blocked sites are now unreachable.")
 }
 
 func cmdDisable() {
+	requireAdmin()
 	fmt.Println("Removing blocklist from hosts file...")
 	must(blockerservice.RemoveBlocklist())
 	fmt.Println("✓ Blocking disabled. Hosts file restored.")
@@ -189,6 +191,7 @@ func cmdSetPassword() {
 // --- Service action helper ---
 
 func runServiceAction(action string) {
+	requireAdmin()
 	svc, err := blockerservice.NewService()
 	must(err)
 
@@ -209,6 +212,18 @@ func runServiceAction(action string) {
 }
 
 // --- Password Helpers ---
+
+// requireAdmin checks that the current process has Administrator privileges.
+// If not, it prints a clear error and exits.
+func requireAdmin() {
+	if !config.IsAdmin() {
+		fmt.Fprintln(os.Stderr, "")
+		fmt.Fprintln(os.Stderr, "Error: Administrator privileges required.")
+		fmt.Fprintln(os.Stderr, "  Please right-click your terminal and choose 'Run as administrator', then try again.")
+		fmt.Fprintln(os.Stderr, "")
+		os.Exit(1)
+	}
+}
 
 // requirePassword prompts for a password and verifies it against the stored hash.
 // If no password is set yet, prompts the user to set one first.
@@ -274,13 +289,15 @@ URL Blocker - Parental Control Tool (Windows)
 =============================================
 Usage: urlblocker <command> [arguments]
 
-Commands (no password required):
+Commands (no privileges required):
   status              Show service status and active blocks
   list                List all domains in the blocklist
 
 Commands (password required):
   add <domain>        Add a domain to the blocklist
   remove <domain>     Remove a domain from the blocklist
+
+Commands (Administrator + password required):
   enable              Apply the blocklist to the hosts file now
   disable             Remove all managed hosts file entries
 
@@ -300,6 +317,6 @@ Examples:
   urlblocker install
   urlblocker status
 
-Note: Commands that modify the hosts file must be run as Administrator.
+Tip: Run your terminal as Administrator to use enable, disable, and service commands.
 `)
 }

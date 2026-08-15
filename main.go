@@ -4,31 +4,34 @@ import (
 	"os"
 
 	"github.com/Kevsssssss/website_url_blocker/cli"
+	"github.com/Kevsssssss/website_url_blocker/repl"
 	"github.com/Kevsssssss/website_url_blocker/service"
 	svc "github.com/kardianos/service"
 )
 
 func main() {
-	// If no args OR first arg is a CLI command, run CLI mode
 	args := os.Args[1:]
 
-	// kardianos/service passes a special flag when run as a service
-	// We detect this by checking if the service manager invoked us
-	s, err := service.NewService()
-	if err == nil {
-		// Check if we're being invoked by the Windows Service Control Manager
-		// (no args, or service-specific args)
-		if svc.Interactive() {
-			// Running interactively — dispatch CLI
-			cli.Run(args)
-		} else {
-			// Running as a Windows service — enter service loop
-			if err := s.Run(); err != nil {
-				os.Exit(1)
-			}
-		}
-	} else {
-		// Fallback: just run CLI if service can't be created
+	// If any arguments are provided, always dispatch to CLI.
+	// Never let svc.Interactive() interfere with explicit commands.
+	if len(args) > 0 {
 		cli.Run(args)
+		return
 	}
+
+	// No arguments: check if we were invoked by the Windows Service Control Manager.
+	if !svc.Interactive() {
+		s, err := service.NewService()
+		if err != nil {
+			os.Exit(1)
+		}
+		if err := s.Run(); err != nil {
+			os.Exit(1)
+		}
+		return
+	}
+
+	// No arguments, running interactively (double-clicked or run from terminal):
+	// launch the interactive REPL shell.
+	repl.Start()
 }
