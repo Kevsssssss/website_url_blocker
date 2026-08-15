@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"syscall"
 
@@ -60,6 +61,8 @@ func Run(args []string) {
 		cmdDisable()
 	case "setpassword":
 		cmdSetPassword()
+	case "flush":
+		cmdFlush()
 	case "help", "--help", "-h":
 		printHelp()
 	default:
@@ -114,6 +117,22 @@ func cmdDisable() {
 	fmt.Println("Removing blocklist from hosts file...")
 	must(blockerservice.RemoveBlocklist())
 	fmt.Println("✓ Blocking disabled. Hosts file restored.")
+}
+
+func cmdFlush() {
+	fmt.Println("Flushing DNS cache...")
+	cmd := exec.Command("ipconfig", "/flushdns")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	if err != nil {
+		fmt.Printf("Error flushing DNS cache: %v\n", err)
+	} else {
+		fmt.Println("✓ DNS cache flushed successfully.")
+	}
+	fmt.Println("\nReminder: If a site is still not blocked, please ensure that")
+	fmt.Println("'Secure DNS' (or DNS-over-HTTPS) is turned OFF in your browser settings,")
+	fmt.Println("as it bypasses the Windows hosts file.")
 }
 
 func cmdStatus() {
@@ -292,6 +311,7 @@ Usage: urlblocker <command> [arguments]
 Commands (no privileges required):
   status              Show service status and active blocks
   list                List all domains in the blocklist
+  flush               Flush Windows DNS cache to apply blocks instantly
 
 Commands (password required):
   add <domain>        Add a domain to the blocklist

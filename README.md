@@ -114,6 +114,7 @@ You can also run single commands from any terminal:
 | `help` | Show all available commands | No | No |
 | `status` | Show service status and active blocks | No | No |
 | `list` | List all domains in the blocklist | No | No |
+| `flush` | Flush Windows DNS cache to apply blocks instantly | No | No |
 | `add <domain>` | Add a domain to the blocklist | No | Yes |
 | `remove <domain>` | Remove a domain from the blocklist | No | Yes |
 | `enable` | Apply the blocklist to the hosts file now | Yes | Yes |
