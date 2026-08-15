@@ -6,12 +6,25 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/Kevsssssss/website_url_blocker/cli"
+	"github.com/Kevsssssss/website_url_blocker/config"
 )
 
 // Start launches the interactive REPL shell.
 // It is entered when urlblocker.exe is run with no arguments.
 func Start() {
 	printBanner()
+
+	// Enforce password setup on very first run
+	hashPath, err := config.PasswordHashPath()
+	if err == nil {
+		if _, err := os.Stat(hashPath); os.IsNotExist(err) {
+			fmt.Println("Welcome to URL Blocker! Let's set up your parental control password first.")
+			cli.Run([]string{"setpassword"})
+			fmt.Println()
+		}
+	}
 
 	exe, err := os.Executable()
 	if err != nil {
