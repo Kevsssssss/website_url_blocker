@@ -109,8 +109,8 @@ You can also run single commands from any terminal:
 
 ## CLI Reference
 
-| Command | Description | Admin | Password |
-|---|---|---|---|
+| Command | Description | Admin Required | Password Required |
+| :--- | :--- | :--- | :--- |
 | `help` | Show all available commands | No | No |
 | `status` | Show service status and active blocks | No | No |
 | `list` | List all domains in the blocklist | No | No |
@@ -119,11 +119,11 @@ You can also run single commands from any terminal:
 | `remove <domain>` | Remove a domain from the blocklist | No | Yes |
 | `enable` | Apply the blocklist to the hosts file now | Yes | Yes |
 | `disable` | Remove all managed hosts file entries | Yes | Yes |
-| `install` | Install as a Windows background service | Yes | Yes |
-| `uninstall` | Remove the Windows service | Yes | Yes |
-| `start` | Start the background service | Yes | Yes |
-| `stop` | Stop the background service | Yes | Yes |
-| `setpassword` | Set or change the CLI password | No | Yes (old) |
+| `install` | Install as a Windows background service | Yes | No |
+| `uninstall` | Remove the Windows service | Yes | No |
+| `start` | Start the background service | Yes | No |
+| `stop` | Stop the background service | Yes | No |
+| `setpassword` | Set or change the CLI password | No | (Requires old password) |
 | `exit` / `quit` | Close the interactive shell | No | No |
 
 ---

@@ -26,16 +26,12 @@ func Run(args []string) {
 
 	switch cmd {
 	case "install":
-		requirePassword()
 		runServiceAction("install")
 	case "uninstall":
-		requirePassword()
 		runServiceAction("uninstall")
 	case "start":
-		requirePassword()
 		runServiceAction("start")
 	case "stop":
-		requirePassword()
 		runServiceAction("stop")
 	case "status":
 		cmdStatus()
@@ -321,7 +317,7 @@ Commands (Administrator + password required):
   enable              Apply the blocklist to the hosts file now
   disable             Remove all managed hosts file entries
 
-Service management (Administrator + password required):
+Service management (Administrator required):
   install             Install as a Windows background service
   uninstall           Remove the Windows service
   start               Start the background service
