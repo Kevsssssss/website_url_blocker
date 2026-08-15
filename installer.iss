@@ -15,7 +15,6 @@ Source: "blocklist.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\URL Blocker Interactive Shell"; Filename: "{app}\urlblocker.exe"
-Name: "{commondesktop}\URL Blocker"; Filename: "{app}\urlblocker.exe"
 
 [Run]
 ; Install and start the service silently after installation
@@ -25,6 +24,8 @@ Filename: "{app}\urlblocker.exe"; Parameters: "start"; Flags: runhidden runascur
 Filename: "{app}\urlblocker.exe"; Description: "Launch URL Blocker Interactive Shell"; Flags: postinstall runascurrentuser
 
 [UninstallRun]
+; Force kill any open interactive shells so uninstaller can delete the .exe
+Filename: "taskkill"; Parameters: "/f /im urlblocker.exe"; Flags: runhidden
 ; Stop and uninstall the service before removing files
 Filename: "{app}\urlblocker.exe"; Parameters: "stop"; Flags: runhidden runascurrentuser
 Filename: "{app}\urlblocker.exe"; Parameters: "disable"; Flags: runhidden runascurrentuser
