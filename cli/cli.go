@@ -76,7 +76,7 @@ func cmdAdd(domain string) {
 	must(err)
 	must(blockerservice.AddDomainToBlocklist(path, domain))
 	fmt.Printf("✓ Added '%s' to blocklist.\n", domain)
-	fmt.Println("  Run 'urlblocker enable' to apply changes now, or wait for the service to reload.")
+	fmt.Println("  Run 'enable' to apply changes now, or wait for the service to reload.")
 }
 
 func cmdRemove(domain string) {
@@ -84,7 +84,7 @@ func cmdRemove(domain string) {
 	must(err)
 	must(blockerservice.RemoveDomainFromBlocklist(path, domain))
 	fmt.Printf("✓ Removed '%s' from blocklist.\n", domain)
-	fmt.Println("  Run 'urlblocker enable' to apply changes now.")
+	fmt.Println("  Run 'enable' to apply changes now.")
 }
 
 func cmdList() {
@@ -93,7 +93,7 @@ func cmdList() {
 	domains, err := blockerservice.ReadBlocklist(path)
 	must(err)
 	if len(domains) == 0 {
-		fmt.Println("Blocklist is empty. Add domains with: urlblocker add <domain>")
+		fmt.Println("Blocklist is empty. Add domains with: add <domain>")
 		return
 	}
 	fmt.Printf("Blocked domains (%d):\n", len(domains))
@@ -198,7 +198,7 @@ func runServiceAction(action string) {
 	switch action {
 	case "install":
 		must(svc.Install())
-		fmt.Println("✓ Service installed. Run 'urlblocker start' to activate.")
+		fmt.Println("✓ Service installed. Run 'start' to activate.")
 	case "uninstall":
 		must(svc.Uninstall())
 		fmt.Println("✓ Service uninstalled.")
@@ -311,11 +311,11 @@ Password management:
   setpassword         Set or change the CLI password
 
 Examples:
-  urlblocker add facebook.com
-  urlblocker list
-  urlblocker enable
-  urlblocker install
-  urlblocker status
+  add facebook.com
+  list
+  enable
+  install
+  status
 
 Tip: Run your terminal as Administrator to use enable, disable, and service commands.
 `)
