@@ -20,3 +20,6 @@ go.work
 
 # Sensitive / local data
 *.hash
+
+# rsrc.syso is intentionally tracked — it embeds the UAC manifest into the binary.
+# Do NOT add *.syso here.
