@@ -53,12 +53,12 @@ func runCmd(exe string, args []string) {
 
 func printBanner() {
 	fmt.Println()
-	fmt.Println("  \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510")
-	fmt.Println("  \u2502   \U0001f6e1\ufe0f  URL Blocker - Parental Control  \u2502")
-	fmt.Println("  \u2502          Interactive Shell           \u2502")
-	fmt.Println("  \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518")
+	fmt.Println("  +--------------------------------------+")
+	fmt.Println("  |   URL Blocker - Parental Control    |")
+	fmt.Println("  |         Interactive Shell           |")
+	fmt.Println("  +--------------------------------------+")
 	fmt.Println()
-	fmt.Println("  Type 'help'        \u2192 see all commands")
-	fmt.Println("  Type 'exit'        \u2192 close this window")
+	fmt.Println("  Type 'help'        -> see all commands")
+	fmt.Println("  Type 'exit'        -> close this window")
 	fmt.Println()
 }

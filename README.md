@@ -1,16 +1,16 @@
-# 🛡️ Website URL Blocker
+# Website URL Blocker
 
 A lightweight, background parental control tool for Windows built in Go. It blocks domains system-wide by modifying the Windows hosts file and can run as an auto-starting Windows service.
 
 ## Features
 
-- 🖥️ **Interactive shell** — double-click `urlblocker.exe` to open a dedicated terminal with a live prompt
-- 🚫 **Blocks domains system-wide** — via the Windows hosts file, affects all browsers and apps
-- 🔄 **Hot-reload** — detects changes to `blocklist.txt` every 30 seconds without restarting
-- 🔐 **Password-protected** — bcrypt-hashed password prevents children from disabling the blocker
-- ⚙️ **Windows Service support** — install once, starts automatically with Windows
-- 🛡️ **Runtime admin check** — commands that need Administrator show a clear error if not elevated
-- 🪶 **Lightweight** — single binary, no background UI, minimal resource usage
+- **Interactive shell** — double-click `urlblocker.exe` to open a dedicated terminal with a live prompt
+- **Blocks domains system-wide** — via the Windows hosts file, affects all browsers and apps
+- **Hot-reload** — detects changes to `blocklist.txt` every 30 seconds without restarting
+- **Password-protected** — bcrypt-hashed password prevents children from disabling the blocker
+- **Windows Service support** — install once, starts automatically with Windows
+- **Runtime admin check** — commands that need Administrator show a clear error if not elevated
+- **Lightweight** — single binary, no background UI, minimal resource usage
 
 ---
 
@@ -34,21 +34,21 @@ go build -o urlblocker.exe .
 
 ### 2. Double-click to launch
 
-Double-click `urlblocker.exe` — a console window opens automatically with an interactive shell:
+Double-click `urlblocker.exe` — a UAC prompt will appear. Click **Yes**, and a console window opens with an interactive shell:
 
 ```
-  ┌──────────────────────────────────────┐
-  │   🛡️  URL Blocker - Parental Control  │
-  │          Interactive Shell           │
-  └──────────────────────────────────────┘
+  +--------------------------------------+
+  |   URL Blocker - Parental Control    |
+  |         Interactive Shell           |
+  +--------------------------------------+
 
-  Type 'help'        → see all commands
-  Type 'exit'        → close this window
+  Type 'help'        -> see all commands
+  Type 'exit'        -> close this window
 
 urlblocker>
 ```
 
-> 💡 **Tip:** Right-click `urlblocker.exe` and select **Pin to taskbar** for one-click access.
+> Tip: Right-click `urlblocker.exe` and select **Pin to taskbar** for one-click access.
 
 ### 3. Set a password (first run)
 
@@ -66,15 +66,13 @@ urlblocker> add instagram.com
 
 ### 5. Enable blocking
 
-Run your terminal **as Administrator**, then:
+Since the shell already runs as Administrator, just run:
 
 ```
 urlblocker> enable
 ```
 
 ### 6. Install as a Windows service (auto-starts with Windows)
-
-Open an **Administrator** terminal and run:
 
 ```
 urlblocker> install
@@ -113,19 +111,19 @@ You can also run single commands from any terminal:
 
 | Command | Description | Admin | Password |
 |---|---|---|---|
-| `help` | Show all available commands | ❌ | ❌ |
-| `status` | Show service status and active blocks | ❌ | ❌ |
-| `list` | List all domains in the blocklist | ❌ | ❌ |
-| `add <domain>` | Add a domain to the blocklist | ❌ | ✅ |
-| `remove <domain>` | Remove a domain from the blocklist | ❌ | ✅ |
-| `enable` | Apply the blocklist to the hosts file now | ✅ | ✅ |
-| `disable` | Remove all managed hosts file entries | ✅ | ✅ |
-| `install` | Install as a Windows background service | ✅ | ✅ |
-| `uninstall` | Remove the Windows service | ✅ | ✅ |
-| `start` | Start the background service | ✅ | ✅ |
-| `stop` | Stop the background service | ✅ | ✅ |
-| `setpassword` | Set or change the CLI password | ❌ | ✅ (old) |
-| `exit` / `quit` | Close the interactive shell | ❌ | ❌ |
+| `help` | Show all available commands | No | No |
+| `status` | Show service status and active blocks | No | No |
+| `list` | List all domains in the blocklist | No | No |
+| `add <domain>` | Add a domain to the blocklist | No | Yes |
+| `remove <domain>` | Remove a domain from the blocklist | No | Yes |
+| `enable` | Apply the blocklist to the hosts file now | Yes | Yes |
+| `disable` | Remove all managed hosts file entries | Yes | Yes |
+| `install` | Install as a Windows background service | Yes | Yes |
+| `uninstall` | Remove the Windows service | Yes | Yes |
+| `start` | Start the background service | Yes | Yes |
+| `stop` | Stop the background service | Yes | Yes |
+| `setpassword` | Set or change the CLI password | No | Yes (old) |
+| `exit` / `quit` | Close the interactive shell | No | No |
 
 ---
 
@@ -171,7 +169,7 @@ website_url_blocker/
 ├── main.go               # Entrypoint — interactive shell or Windows service
 ├── go.mod / go.sum       # Go module + dependency lock
 ├── blocklist.txt         # Your domain blocklist
-├── app.manifest          # Windows application manifest
+├── app.manifest          # Windows application manifest (UAC elevation)
 ├── rsrc.syso             # Compiled manifest (embedded into binary)
 ├── README.md
 ├── .gitignore
@@ -199,13 +197,11 @@ Remove-Item "$env:APPDATA\urlblocker\password.hash"
 .\urlblocker.exe setpassword
 ```
 
-> ⚠️ **Note:** Anyone with Administrator access can reset the password. For stronger protection, restrict access to the folder containing `urlblocker.exe`.
+> Note: Anyone with Administrator access can reset the password. For stronger protection, restrict access to the folder containing `urlblocker.exe`.
 
 ---
 
 ## Uninstalling
-
-Open an **Administrator** terminal and run:
 
 ```
 urlblocker> stop
