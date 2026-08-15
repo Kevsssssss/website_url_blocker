@@ -118,7 +118,7 @@ You can also run single commands from any terminal:
 | `add <domain>` | Add a domain to the blocklist | No | Yes |
 | `remove <domain>` | Remove a domain from the blocklist | No | Yes |
 | `enable` | Apply the blocklist to the hosts file now | Yes | Yes |
-| `disable` | Remove all managed hosts file entries | Yes | Yes |
+| `disable` | Remove all managed hosts file entries | Yes | No |
 | `install` | Install as a Windows background service | Yes | No |
 | `uninstall` | Remove the Windows service | Yes | No |
 | `start` | Start the background service | Yes | No |

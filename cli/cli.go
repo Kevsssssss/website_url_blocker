@@ -53,7 +53,6 @@ func Run(args []string) {
 		requirePassword()
 		cmdEnable()
 	case "disable":
-		requirePassword()
 		cmdDisable()
 	case "setpassword", "changepassword":
 		cmdSetPassword()
@@ -313,9 +312,11 @@ Commands (password required):
   add <domain>        Add a domain to the blocklist
   remove <domain>     Remove a domain from the blocklist
 
+Commands (Administrator required):
+  disable             Remove all managed hosts file entries
+
 Commands (Administrator + password required):
   enable              Apply the blocklist to the hosts file now
-  disable             Remove all managed hosts file entries
 
 Service management (Administrator required):
   install             Install as a Windows background service
