@@ -123,7 +123,8 @@ You can also run single commands from any terminal:
 | `uninstall` | Remove the Windows service | Yes | No |
 | `start` | Start the background service | Yes | No |
 | `stop` | Stop the background service | Yes | No |
-| `setpassword` | Set or change the CLI password | No | (Requires old password) |
+| `setpassword` | Set the CLI password | No | No |
+| `changepassword` | Change the existing CLI password | No | (Requires old password) |
 | `exit` / `quit` | Close the interactive shell | No | No |
 
 ---

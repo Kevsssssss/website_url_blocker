@@ -55,7 +55,7 @@ func Run(args []string) {
 	case "disable":
 		requirePassword()
 		cmdDisable()
-	case "setpassword":
+	case "setpassword", "changepassword":
 		cmdSetPassword()
 	case "flush":
 		cmdFlush()
@@ -324,7 +324,8 @@ Service management (Administrator required):
   stop                Stop the background service
 
 Password management:
-  setpassword         Set or change the CLI password
+  setpassword         Set the CLI password (if not already set)
+  changepassword      Change the existing CLI password
 
 Examples:
   add facebook.com
