@@ -60,6 +60,33 @@ func Run(args []string) {
 		cmdFlush()
 	case "help", "--help", "-h":
 		printHelp()
+	// --- Mutual-block group commands ---
+	case "group-add":
+		if len(args) < 3 {
+			fatalf("Usage: urlblocker group-add <name> <domain1> [domain2 ...]")
+		}
+		requirePassword()
+		cmdGroupAdd(args[1], args[2:])
+	case "group-remove":
+		if len(args) < 2 {
+			fatalf("Usage: urlblocker group-remove <name>")
+		}
+		requirePassword()
+		cmdGroupRemove(args[1])
+	case "group-allow":
+		if len(args) < 3 {
+			fatalf("Usage: urlblocker group-allow <name> <domain>")
+		}
+		requirePassword()
+		cmdGroupAllow(args[1], args[2])
+	case "group-reset":
+		if len(args) < 2 {
+			fatalf("Usage: urlblocker group-reset <name>")
+		}
+		requirePassword()
+		cmdGroupReset(args[1])
+	case "group-list":
+		cmdGroupList()
 	default:
 		fmt.Printf("Unknown command: %s\n\n", cmd)
 		printHelp()
@@ -128,6 +155,91 @@ func cmdFlush() {
 	fmt.Println("\nReminder: If a site is still not blocked, please ensure that")
 	fmt.Println("'Secure DNS' (or DNS-over-HTTPS) is turned OFF in your browser settings,")
 	fmt.Println("as it bypasses the Windows hosts file.")
+}
+
+// --- Mutual-block group command implementations ---
+
+func cmdGroupAdd(name string, domains []string) {
+	groupsPath, err := config.GroupsPath()
+	must(err)
+	blocklistPath, err := config.BlocklistPath()
+	must(err)
+
+	must(blockerservice.AddGroup(groupsPath, name, domains))
+	fmt.Printf("✓ Group '%s' created with %d domain(s).\n", name, len(domains))
+
+	// Also add every domain to blocklist.txt (skip duplicates silently)
+	added := 0
+	for _, d := range domains {
+		if err := blockerservice.AddDomainToBlocklist(blocklistPath, d); err == nil {
+			added++
+		}
+	}
+	if added > 0 {
+		fmt.Printf("  Added %d domain(s) to blocklist.txt.\n", added)
+	}
+	fmt.Println("  All domains in the group are blocked. Use 'group-allow' to allow one.")
+}
+
+func cmdGroupRemove(name string) {
+	groupsPath, err := config.GroupsPath()
+	must(err)
+	must(blockerservice.RemoveGroup(groupsPath, name))
+	fmt.Printf("✓ Group '%s' removed.\n", name)
+	fmt.Println("  Note: domains remain in blocklist.txt. Remove them manually if desired.")
+}
+
+func cmdGroupAllow(name, domain string) {
+	requireAdmin()
+	groupsPath, err := config.GroupsPath()
+	must(err)
+	must(blockerservice.GroupSetActive(groupsPath, name, domain))
+	fmt.Printf("✓ '%s' is now the active (allowed) site in group '%s'.\n", domain, name)
+	fmt.Println("  All other group members are blocked. Applying hosts file now...")
+	must(blockerservice.ApplyBlocklist())
+	fmt.Println("✓ Hosts file updated.")
+}
+
+func cmdGroupReset(name string) {
+	requireAdmin()
+	groupsPath, err := config.GroupsPath()
+	must(err)
+	must(blockerservice.GroupSetActive(groupsPath, name, ""))
+	fmt.Printf("✓ Group '%s' reset — all members are now blocked.\n", name)
+	fmt.Println("  Applying hosts file now...")
+	must(blockerservice.ApplyBlocklist())
+	fmt.Println("✓ Hosts file updated.")
+}
+
+func cmdGroupList() {
+	groupsPath, err := config.GroupsPath()
+	must(err)
+	groups, err := blockerservice.ReadGroups(groupsPath)
+	must(err)
+
+	if len(groups) == 0 {
+		fmt.Println("No mutual-block groups defined. Create one with: group-add <name> <domain1> <domain2> ...")
+		return
+	}
+
+	fmt.Printf("Mutual-block groups (%d):\n\n", len(groups))
+	for _, g := range groups {
+		activeLabel := "(none — all blocked)"
+		if g.Active != "" {
+			activeLabel = g.Active + "  ✓ allowed"
+		}
+		fmt.Printf("  Group : %s\n", g.Name)
+		fmt.Printf("  Active: %s\n", activeLabel)
+		fmt.Printf("  Members:\n")
+		for _, d := range g.Domains {
+			marker := "    •"
+			if d == g.Active {
+				marker = "    ▶"
+			}
+			fmt.Printf("%s %s\n", marker, d)
+		}
+		fmt.Println()
+	}
 }
 
 func cmdStatus() {
@@ -306,11 +418,23 @@ Usage: urlblocker <command> [arguments]
 Commands (no privileges required):
   status              Show service status and active blocks
   list                List all domains in the blocklist
+  group-list          List all mutual-block groups and their active site
   flush               Flush Windows DNS cache to apply blocks instantly
 
 Commands (password required):
   add <domain>        Add a domain to the blocklist
   remove <domain>     Remove a domain from the blocklist
+
+Mutual-block groups (password required):
+  group-add  <name> <domain1> <domain2> [...]
+                      Create a group — only one site can be active at a time.
+                      All domains are added to blocklist.txt and start blocked.
+  group-remove <name> Delete a group (domains stay in blocklist.txt)
+  group-allow  <name> <domain>
+                      Allow one site in the group; all others are blocked.
+                      (Also requires Administrator)
+  group-reset  <name> Block all sites in the group again.
+                      (Also requires Administrator)
 
 Commands (Administrator required):
   disable             Remove all managed hosts file entries
@@ -330,11 +454,14 @@ Password management:
 
 Examples:
   add facebook.com
-  list
+  group-add gaming roblox.com youtube.com twitch.tv
+  group-allow gaming roblox.com
+  group-reset gaming
+  group-list
   enable
   install
   status
 
-Tip: Run your terminal as Administrator to use enable, disable, and service commands.
+Tip: Run your terminal as Administrator to use enable, disable, group-allow, group-reset, and service commands.
 `)
 }

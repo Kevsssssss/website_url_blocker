@@ -105,6 +105,8 @@ func RemoveDomainFromBlocklist(path, domain string) error {
 }
 
 // ApplyBlocklist injects all domains from blocklist.txt into the hosts file.
+// It also merges in any group-blocked domains from groups.json (all non-active
+// members of every mutual-block group), deduplicating the combined list.
 func ApplyBlocklist() error {
 	blocklistPath, err := config.BlocklistPath()
 	if err != nil {
@@ -114,6 +116,27 @@ func ApplyBlocklist() error {
 	if err != nil {
 		return err
 	}
+
+	// Merge group-blocked domains (non-active members of every group)
+	groupsPath, err := config.GroupsPath()
+	if err == nil {
+		if groups, err := ReadGroups(groupsPath); err == nil {
+			groupBlocked := GroupGetBlockedDomains(groups)
+			// Deduplicate: add only domains not already in the blocklist
+			existing := make(map[string]bool, len(domains))
+			for _, d := range domains {
+				existing[normalizeDomain(d)] = true
+			}
+			for _, d := range groupBlocked {
+				d = normalizeDomain(d)
+				if !existing[d] {
+					domains = append(domains, d)
+					existing[d] = true
+				}
+			}
+		}
+	}
+
 	return injectHosts(domains)
 }
 

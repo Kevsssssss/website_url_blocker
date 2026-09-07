@@ -23,6 +23,9 @@ const (
 	// BlocklistFilename is the name of the domain blocklist file
 	BlocklistFilename = "blocklist.txt"
 
+	// GroupsFilename is the name of the mutual-block groups config file
+	GroupsFilename = "groups.json"
+
 	// PasswordFilename is the bcrypt hash file name
 	PasswordFilename = "password.hash"
 
@@ -70,4 +73,13 @@ func BlocklistPath() (string, error) {
 		return "", fmt.Errorf("could not determine executable path: %w", err)
 	}
 	return filepath.Join(filepath.Dir(exe), BlocklistFilename), nil
+}
+
+// GroupsPath returns the path to groups.json (same dir as the executable)
+func GroupsPath() (string, error) {
+	exe, err := os.Executable()
+	if err != nil {
+		return "", fmt.Errorf("could not determine executable path: %w", err)
+	}
+	return filepath.Join(filepath.Dir(exe), GroupsFilename), nil
 }
