@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 )
 
 // Group represents a mutual-block group: only the "Active" domain is allowed;
@@ -12,16 +13,82 @@ type Group struct {
 	// Name is the human-readable identifier for this group.
 	Name string `json:"name"`
 
-	// Active is the one domain in this group that is currently allowed ("" = all blocked).
+	// Active is the one domain in this group that is currently allowed ("" = auto mode).
+	// Set by 'group-allow' as a parent override; "" means the DNS proxy decides automatically.
 	Active string `json:"active"`
 
 	// Domains lists every domain belonging to this group.
 	Domains []string `json:"domains"`
+
+	// TimeoutMinutes is the inactivity timeout for auto-detected sessions in this group.
+	// 0 means use the global default (config.GroupSessionTimeout).
+	TimeoutMinutes int `json:"timeout_minutes,omitempty"`
 }
 
 // groupsFile is the on-disk JSON envelope.
 type groupsFile struct {
 	Groups []Group `json:"groups"`
+}
+
+// SessionEntry is the live DNS-proxy session state for one group.
+// Written by the DNS proxy to groups_state.json; read by group-list.
+type SessionEntry struct {
+	// ActiveDomain is the domain currently holding the group lock ("" = none).
+	ActiveDomain string `json:"active_domain"`
+	// LastSeen is when the active domain last sent a DNS query.
+	LastSeen time.Time `json:"last_seen"`
+	// Source is "auto" (DNS-detected) or "override" (set by group-allow).
+	Source string `json:"source"`
+}
+
+// groupsStateFile is the on-disk format for groups_state.json.
+type groupsStateFile struct {
+	Sessions map[string]*SessionEntry `json:"sessions"`
+}
+
+// ReadGroupsState reads groups_state.json and returns the live session map.
+// If the file does not exist, it returns an empty map (not an error).
+func ReadGroupsState(path string) (map[string]*SessionEntry, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return map[string]*SessionEntry{}, nil
+		}
+		return nil, fmt.Errorf("could not read groups state file: %w", err)
+	}
+	var sf groupsStateFile
+	if err := json.Unmarshal(data, &sf); err != nil {
+		return nil, fmt.Errorf("could not parse groups state file: %w", err)
+	}
+	if sf.Sessions == nil {
+		sf.Sessions = map[string]*SessionEntry{}
+	}
+	return sf.Sessions, nil
+}
+
+// WriteGroupsState writes the live session state to groups_state.json.
+func WriteGroupsState(path string, sessions map[string]*SessionEntry) error {
+	sf := groupsStateFile{Sessions: sessions}
+	data, err := json.MarshalIndent(sf, "", "  ")
+	if err != nil {
+		return fmt.Errorf("could not encode groups state: %w", err)
+	}
+	return os.WriteFile(path, data, 0644)
+}
+
+// SetGroupTimeout sets the per-group idle timeout in minutes.
+func SetGroupTimeout(path, name string, minutes int) error {
+	groups, err := ReadGroups(path)
+	if err != nil {
+		return err
+	}
+	for i, g := range groups {
+		if g.Name == name {
+			groups[i].TimeoutMinutes = minutes
+			return WriteGroups(path, groups)
+		}
+	}
+	return fmt.Errorf("group '%s' not found", name)
 }
 
 // ReadGroups reads groups.json and returns the list of groups.

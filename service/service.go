@@ -13,6 +13,7 @@ type program struct {
 	logger  service.Logger
 	quit    chan struct{}
 	lastMod time.Time
+	dns     *DNSProxy // local DNS proxy for automatic group enforcement
 }
 
 // NewService creates and returns a configured service.Service instance.
@@ -33,7 +34,26 @@ func (p *program) Start(s service.Service) error {
 	p.logger, _ = s.Logger(nil)
 	p.logInfo("URLBlocker service starting...")
 
-	// Apply blocklist immediately on start
+	// ── Start DNS proxy first ────────────────────────────────────────────────
+	// The proxy must be running BEFORE ApplyBlocklist() so that group domains
+	// are excluded from the hosts file (the proxy handles them via NXDOMAIN).
+	p.dns = NewDNSProxy()
+	if err := p.dns.Start(); err != nil {
+		p.logError("DNS proxy failed to start (port 53 in use?): " + err.Error())
+		p.logInfo("Falling back to hosts-file-only mode for groups.")
+		p.dns = nil
+	} else {
+		GlobalProxy = p.dns
+		p.logInfo("DNS proxy started on " + config.DNSListenAddr)
+		if err := redirectDNS(); err != nil {
+			p.logError("Failed to redirect system DNS: " + err.Error())
+		} else {
+			p.logInfo("System DNS redirected to " + config.DNSListenAddr)
+		}
+	}
+
+	// ── Apply blocklist ──────────────────────────────────────────────────────
+	// Group domains are excluded when GlobalProxy != nil.
 	if err := ApplyBlocklist(); err != nil {
 		p.logError("Failed to apply blocklist on start: " + err.Error())
 	} else {
@@ -87,6 +107,18 @@ func (p *program) checkAndReload(blocklistPath string) {
 func (p *program) Stop(s service.Service) error {
 	p.logInfo("URLBlocker service stopping, removing hosts entries...")
 	close(p.quit)
+
+	// ── Stop DNS proxy and restore system DNS ────────────────────────────────
+	if p.dns != nil {
+		p.dns.Stop()
+		GlobalProxy = nil
+		if err := restoreDNS(); err != nil {
+			p.logError("Failed to restore system DNS: " + err.Error())
+		} else {
+			p.logInfo("System DNS restored.")
+		}
+	}
+
 	if err := RemoveBlocklist(); err != nil {
 		p.logError("Failed to remove blocklist on stop: " + err.Error())
 	}

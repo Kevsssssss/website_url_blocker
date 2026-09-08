@@ -26,6 +26,9 @@ const (
 	// GroupsFilename is the name of the mutual-block groups config file
 	GroupsFilename = "groups.json"
 
+	// GroupsStateFilename stores the live DNS-proxy session state (read by group-list)
+	GroupsStateFilename = "groups_state.json"
+
 	// PasswordFilename is the bcrypt hash file name
 	PasswordFilename = "password.hash"
 
@@ -34,6 +37,16 @@ const (
 
 	// PollInterval is how often the service checks for blocklist changes (seconds)
 	PollInterval = 30
+
+	// DNSListenAddr is the address the local DNS proxy listens on
+	DNSListenAddr = "127.0.0.1:53"
+
+	// DNSUpstream is the real DNS server queries are forwarded to
+	DNSUpstream = "1.1.1.1:53"
+
+	// GroupSessionTimeout is the default inactivity timeout in minutes before
+	// the active site lock in a group is automatically released
+	GroupSessionTimeout = 5
 )
 
 // AppDataDir returns the path to the app's data directory (%APPDATA%\urlblocker)
@@ -82,4 +95,14 @@ func GroupsPath() (string, error) {
 		return "", fmt.Errorf("could not determine executable path: %w", err)
 	}
 	return filepath.Join(filepath.Dir(exe), GroupsFilename), nil
+}
+
+// GroupsStatePath returns the path to groups_state.json, which the DNS proxy
+// writes with the live session state so the CLI can display it in group-list.
+func GroupsStatePath() (string, error) {
+	exe, err := os.Executable()
+	if err != nil {
+		return "", fmt.Errorf("could not determine executable path: %w", err)
+	}
+	return filepath.Join(filepath.Dir(exe), GroupsStateFilename), nil
 }

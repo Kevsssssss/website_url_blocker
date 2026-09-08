@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/Kevsssssss/website_url_blocker/config"
 	blockerservice "github.com/Kevsssssss/website_url_blocker/service"
@@ -87,6 +89,12 @@ func Run(args []string) {
 		cmdGroupReset(args[1])
 	case "group-list":
 		cmdGroupList()
+	case "group-timeout":
+		if len(args) < 3 {
+			fatalf("Usage: urlblocker group-timeout <name> <minutes>")
+		}
+		requirePassword()
+		cmdGroupTimeout(args[1], args[2])
 	default:
 		fmt.Printf("Unknown command: %s\n\n", cmd)
 		printHelp()
@@ -168,7 +176,8 @@ func cmdGroupAdd(name string, domains []string) {
 	must(blockerservice.AddGroup(groupsPath, name, domains))
 	fmt.Printf("✓ Group '%s' created with %d domain(s).\n", name, len(domains))
 
-	// Also add every domain to blocklist.txt (skip duplicates silently)
+	// Also add every domain to blocklist.txt so they are blocked via hosts file
+	// when the service is not running (fallback protection).
 	added := 0
 	for _, d := range domains {
 		if err := blockerservice.AddDomainToBlocklist(blocklistPath, d); err == nil {
@@ -178,7 +187,9 @@ func cmdGroupAdd(name string, domains []string) {
 	if added > 0 {
 		fmt.Printf("  Added %d domain(s) to blocklist.txt.\n", added)
 	}
-	fmt.Println("  All domains in the group are blocked. Use 'group-allow' to allow one.")
+	fmt.Println("  All domains are blocked by default.")
+	fmt.Println("  When the service is running, the first one a user opens will be")
+	fmt.Println("  allowed automatically; the rest will be blocked until it goes idle.")
 }
 
 func cmdGroupRemove(name string) {
@@ -189,28 +200,35 @@ func cmdGroupRemove(name string) {
 	fmt.Println("  Note: domains remain in blocklist.txt. Remove them manually if desired.")
 }
 
+// cmdGroupAllow sets a parent override: forces a specific domain to be the
+// active (allowed) site in the group, bypassing the automatic DNS detection.
 func cmdGroupAllow(name, domain string) {
 	requireAdmin()
 	groupsPath, err := config.GroupsPath()
 	must(err)
 	must(blockerservice.GroupSetActive(groupsPath, name, domain))
-	fmt.Printf("✓ '%s' is now the active (allowed) site in group '%s'.\n", domain, name)
-	fmt.Println("  All other group members are blocked. Applying hosts file now...")
+	fmt.Printf("✓ Parent override set: '%s' is now the allowed site in group '%s'.\n", domain, name)
+	fmt.Println("  All other group members are blocked.")
+	fmt.Println("  The DNS proxy will enforce this immediately on the next DNS query.")
+	fmt.Println("  Run 'group-reset' to return to automatic detection.")
 	must(blockerservice.ApplyBlocklist())
 	fmt.Println("✓ Hosts file updated.")
 }
 
+// cmdGroupReset clears the parent override and returns the group to automatic
+// DNS-detection mode (first site opened wins the lock).
 func cmdGroupReset(name string) {
 	requireAdmin()
 	groupsPath, err := config.GroupsPath()
 	must(err)
 	must(blockerservice.GroupSetActive(groupsPath, name, ""))
-	fmt.Printf("✓ Group '%s' reset — all members are now blocked.\n", name)
-	fmt.Println("  Applying hosts file now...")
+	fmt.Printf("✓ Group '%s' returned to automatic mode — all members are blocked.\n", name)
+	fmt.Println("  The first site a user opens will be allowed; the rest stay blocked.")
 	must(blockerservice.ApplyBlocklist())
 	fmt.Println("✓ Hosts file updated.")
 }
 
+// cmdGroupList shows all groups with their live DNS-proxy session state.
 func cmdGroupList() {
 	groupsPath, err := config.GroupsPath()
 	must(err)
@@ -222,24 +240,59 @@ func cmdGroupList() {
 		return
 	}
 
+	// Read live session state written by the DNS proxy.
+	statePath, _ := config.GroupsStatePath()
+	liveState, _ := blockerservice.ReadGroupsState(statePath)
+
 	fmt.Printf("Mutual-block groups (%d):\n\n", len(groups))
 	for _, g := range groups {
+		// Determine what is currently active and how.
+		activeDomain := ""
 		activeLabel := "(none — all blocked)"
+
 		if g.Active != "" {
-			activeLabel = g.Active + "  ✓ allowed"
+			// Parent override is set in groups.json.
+			activeDomain = g.Active
+			activeLabel = g.Active + "  [parent override]"
+		} else if liveState != nil {
+			if sess, ok := liveState[g.Name]; ok && sess.ActiveDomain != "" {
+				activeDomain = sess.ActiveDomain
+				ago := time.Since(sess.LastSeen).Truncate(time.Second)
+				activeLabel = fmt.Sprintf("%s  [auto, last seen %s ago]", sess.ActiveDomain, ago)
+			}
 		}
-		fmt.Printf("  Group : %s\n", g.Name)
-		fmt.Printf("  Active: %s\n", activeLabel)
+
+		// Timeout display
+		timeoutMin := config.GroupSessionTimeout
+		if g.TimeoutMinutes > 0 {
+			timeoutMin = g.TimeoutMinutes
+		}
+
+		fmt.Printf("  Group  : %s  (timeout: %d min)\n", g.Name, timeoutMin)
+		fmt.Printf("  Active : %s\n", activeLabel)
 		fmt.Printf("  Members:\n")
 		for _, d := range g.Domains {
 			marker := "    •"
-			if d == g.Active {
+			if d == activeDomain {
 				marker = "    ▶"
 			}
 			fmt.Printf("%s %s\n", marker, d)
 		}
 		fmt.Println()
 	}
+}
+
+// cmdGroupTimeout sets the per-group inactivity timeout in minutes.
+func cmdGroupTimeout(name, minutesStr string) {
+	minutes, err := strconv.Atoi(minutesStr)
+	if err != nil || minutes < 1 {
+		fatalf("Invalid timeout '%s': must be a positive whole number of minutes.", minutesStr)
+	}
+	groupsPath, err := config.GroupsPath()
+	must(err)
+	must(blockerservice.SetGroupTimeout(groupsPath, name, minutes))
+	fmt.Printf("✓ Group '%s' session timeout set to %d minute(s).\n", name, minutes)
+	fmt.Println("  The DNS proxy will use this timeout for automatic session expiry.")
 }
 
 func cmdStatus() {
@@ -418,23 +471,28 @@ Usage: urlblocker <command> [arguments]
 Commands (no privileges required):
   status              Show service status and active blocks
   list                List all domains in the blocklist
-  group-list          List all mutual-block groups and their active site
+  group-list          List all mutual-block groups and their live active site
   flush               Flush Windows DNS cache to apply blocks instantly
 
 Commands (password required):
   add <domain>        Add a domain to the blocklist
   remove <domain>     Remove a domain from the blocklist
 
-Mutual-block groups (password required):
+Mutual-block groups — automatic mode (password required):
   group-add  <name> <domain1> <domain2> [...]
-                      Create a group — only one site can be active at a time.
-                      All domains are added to blocklist.txt and start blocked.
+                      Create a group. When the service runs, the FIRST site a
+                      user opens gets the lock; all others are blocked until
+                      the session expires (default 5 min idle).
   group-remove <name> Delete a group (domains stay in blocklist.txt)
+  group-timeout <name> <minutes>
+                      Set the idle-inactivity timeout for a group.
+
+Parent overrides (password + Administrator required):
   group-allow  <name> <domain>
-                      Allow one site in the group; all others are blocked.
-                      (Also requires Administrator)
-  group-reset  <name> Block all sites in the group again.
-                      (Also requires Administrator)
+                      Force a specific site to be the active one, bypassing
+                      auto-detection. Other group members are blocked.
+  group-reset  <name> Return the group to automatic mode (all blocked until
+                      one is opened by the user).
 
 Commands (Administrator required):
   disable             Remove all managed hosts file entries
@@ -453,15 +511,17 @@ Password management:
   changepassword      Change the existing CLI password
 
 Examples:
-  add facebook.com
   group-add gaming roblox.com youtube.com twitch.tv
-  group-allow gaming roblox.com
-  group-reset gaming
-  group-list
+  group-list                      (see who has the lock right now)
+  group-timeout gaming 10         (release lock after 10 min idle)
+  group-allow gaming youtube.com  (parent override)
+  group-reset gaming              (back to auto mode)
+  add facebook.com
   enable
   install
   status
 
-Tip: Run your terminal as Administrator to use enable, disable, group-allow, group-reset, and service commands.
+Tip: Run your terminal as Administrator to use enable, disable, group-allow,
+     group-reset, and service management commands.
 `)
 }

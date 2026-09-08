@@ -104,9 +104,13 @@ func RemoveDomainFromBlocklist(path, domain string) error {
 	return w.Flush()
 }
 
-// ApplyBlocklist injects all domains from blocklist.txt into the hosts file.
-// It also merges in any group-blocked domains from groups.json (all non-active
-// members of every mutual-block group), deduplicating the combined list.
+// ApplyBlocklist injects domains from blocklist.txt into the hosts file.
+//
+// Behaviour depends on whether the DNS proxy is running:
+//   - DNS proxy ON (GlobalProxy != nil): group member domains are excluded from
+//     the hosts file because the proxy controls them via NXDOMAIN responses.
+//   - DNS proxy OFF: all non-active group members are injected into the hosts
+//     file so blocking still works without the service running.
 func ApplyBlocklist() error {
 	blocklistPath, err := config.BlocklistPath()
 	if err != nil {
@@ -117,22 +121,38 @@ func ApplyBlocklist() error {
 		return err
 	}
 
-	// Merge group-blocked domains (non-active members of every group)
-	groupsPath, err := config.GroupsPath()
-	if err == nil {
-		if groups, err := ReadGroups(groupsPath); err == nil {
-			groupBlocked := GroupGetBlockedDomains(groups)
-			// Deduplicate: add only domains not already in the blocklist
-			existing := make(map[string]bool, len(domains))
-			for _, d := range domains {
-				existing[normalizeDomain(d)] = true
+	groupsPath, _ := config.GroupsPath()
+	groups, _ := ReadGroups(groupsPath)
+
+	if GlobalProxy != nil {
+		// DNS proxy is running — remove ALL group member domains from hosts file
+		// so the proxy can intercept their DNS queries freely.
+		groupMemberSet := make(map[string]bool)
+		for _, g := range groups {
+			for _, d := range g.Domains {
+				groupMemberSet[normalizeDomain(d)] = true
 			}
-			for _, d := range groupBlocked {
-				d = normalizeDomain(d)
-				if !existing[d] {
-					domains = append(domains, d)
-					existing[d] = true
-				}
+		}
+		var filtered []string
+		for _, d := range domains {
+			if !groupMemberSet[normalizeDomain(d)] {
+				filtered = append(filtered, d)
+			}
+		}
+		domains = filtered
+	} else {
+		// DNS proxy is NOT running — fall back to hosts-file blocking for groups.
+		// Add all non-active group members so they stay blocked.
+		groupBlocked := GroupGetBlockedDomains(groups)
+		existing := make(map[string]bool, len(domains))
+		for _, d := range domains {
+			existing[normalizeDomain(d)] = true
+		}
+		for _, d := range groupBlocked {
+			d = normalizeDomain(d)
+			if !existing[d] {
+				domains = append(domains, d)
+				existing[d] = true
 			}
 		}
 	}
