@@ -44,9 +44,9 @@ const (
 	// DNSUpstream is the real DNS server queries are forwarded to
 	DNSUpstream = "1.1.1.1:53"
 
-	// GroupSessionTimeout is the default inactivity timeout in minutes before
+	// GroupSessionTimeout is the default inactivity timeout in seconds before
 	// the active site lock in a group is automatically released
-	GroupSessionTimeout = 5
+	GroupSessionTimeout = 10
 )
 
 // AppDataDir returns the path to the app's data directory (%APPDATA%\urlblocker)

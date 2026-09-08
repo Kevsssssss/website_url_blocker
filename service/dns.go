@@ -1,4 +1,4 @@
-﻿package service
+package service
 
 import (
 	"strings"
@@ -115,9 +115,9 @@ func (p *DNSProxy) handleDNS(w dns.ResponseWriter, r *dns.Msg) {
 
 	// ── Auto mode ───────────────────────────────────────────────────────────
 	// Determine per-group timeout (fall back to global default).
-	timeout := time.Duration(config.GroupSessionTimeout) * time.Minute
-	if group.TimeoutMinutes > 0 {
-		timeout = time.Duration(group.TimeoutMinutes) * time.Minute
+	timeout := time.Duration(config.GroupSessionTimeout) * time.Second
+	if group.TimeoutSeconds > 0 {
+		timeout = time.Duration(group.TimeoutSeconds) * time.Second
 	}
 
 	p.mu.Lock()
@@ -158,7 +158,7 @@ func (p *DNSProxy) handleDNS(w dns.ResponseWriter, r *dns.Msg) {
 
 // runIdleExpiry periodically scans sessions and releases expired locks.
 func (p *DNSProxy) runIdleExpiry() {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -179,9 +179,9 @@ func (p *DNSProxy) runIdleExpiry() {
 				if g.Active != "" {
 					continue
 				}
-				timeout := time.Duration(config.GroupSessionTimeout) * time.Minute
-				if g.TimeoutMinutes > 0 {
-					timeout = time.Duration(g.TimeoutMinutes) * time.Minute
+				timeout := time.Duration(config.GroupSessionTimeout) * time.Second
+				if g.TimeoutSeconds > 0 {
+					timeout = time.Duration(g.TimeoutSeconds) * time.Second
 				}
 				if now.Sub(state.LastSeen) > timeout {
 					state.ActiveDomain = ""

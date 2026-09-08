@@ -20,9 +20,9 @@ type Group struct {
 	// Domains lists every domain belonging to this group.
 	Domains []string `json:"domains"`
 
-	// TimeoutMinutes is the inactivity timeout for auto-detected sessions in this group.
+	// TimeoutSeconds is the inactivity timeout for auto-detected sessions in this group.
 	// 0 means use the global default (config.GroupSessionTimeout).
-	TimeoutMinutes int `json:"timeout_minutes,omitempty"`
+	TimeoutSeconds int `json:"timeout_seconds,omitempty"`
 }
 
 // groupsFile is the on-disk JSON envelope.
@@ -76,15 +76,15 @@ func WriteGroupsState(path string, sessions map[string]*SessionEntry) error {
 	return os.WriteFile(path, data, 0644)
 }
 
-// SetGroupTimeout sets the per-group idle timeout in minutes.
-func SetGroupTimeout(path, name string, minutes int) error {
+// SetGroupTimeout sets the per-group idle timeout in seconds.
+func SetGroupTimeout(path, name string, seconds int) error {
 	groups, err := ReadGroups(path)
 	if err != nil {
 		return err
 	}
 	for i, g := range groups {
 		if g.Name == name {
-			groups[i].TimeoutMinutes = minutes
+			groups[i].TimeoutSeconds = seconds
 			return WriteGroups(path, groups)
 		}
 	}

@@ -263,12 +263,12 @@ func cmdGroupList() {
 		}
 
 		// Timeout display
-		timeoutMin := config.GroupSessionTimeout
-		if g.TimeoutMinutes > 0 {
-			timeoutMin = g.TimeoutMinutes
+		timeoutSec := config.GroupSessionTimeout
+		if g.TimeoutSeconds > 0 {
+			timeoutSec = g.TimeoutSeconds
 		}
 
-		fmt.Printf("  Group  : %s  (timeout: %d min)\n", g.Name, timeoutMin)
+		fmt.Printf("  Group  : %s  (timeout: %d sec)\n", g.Name, timeoutSec)
 		fmt.Printf("  Active : %s\n", activeLabel)
 		fmt.Printf("  Members:\n")
 		for _, d := range g.Domains {
@@ -282,16 +282,16 @@ func cmdGroupList() {
 	}
 }
 
-// cmdGroupTimeout sets the per-group inactivity timeout in minutes.
-func cmdGroupTimeout(name, minutesStr string) {
-	minutes, err := strconv.Atoi(minutesStr)
-	if err != nil || minutes < 1 {
-		fatalf("Invalid timeout '%s': must be a positive whole number of minutes.", minutesStr)
+// cmdGroupTimeout sets the per-group inactivity timeout in seconds.
+func cmdGroupTimeout(name, secondsStr string) {
+	seconds, err := strconv.Atoi(secondsStr)
+	if err != nil || seconds < 1 {
+		fatalf("Invalid timeout '%s': must be a positive whole number of seconds.", secondsStr)
 	}
 	groupsPath, err := config.GroupsPath()
 	must(err)
-	must(blockerservice.SetGroupTimeout(groupsPath, name, minutes))
-	fmt.Printf("✓ Group '%s' session timeout set to %d minute(s).\n", name, minutes)
+	must(blockerservice.SetGroupTimeout(groupsPath, name, seconds))
+	fmt.Printf("✓ Group '%s' session timeout set to %d second(s).\n", name, seconds)
 	fmt.Println("  The DNS proxy will use this timeout for automatic session expiry.")
 }
 
@@ -482,9 +482,9 @@ Mutual-block groups — automatic mode (password required):
   group-add  <name> <domain1> <domain2> [...]
                       Create a group. When the service runs, the FIRST site a
                       user opens gets the lock; all others are blocked until
-                      the session expires (default 5 min idle).
+                      the session expires (default 10 sec idle).
   group-remove <name> Delete a group (domains stay in blocklist.txt)
-  group-timeout <name> <minutes>
+  group-timeout <name> <seconds>
                       Set the idle-inactivity timeout for a group.
 
 Parent overrides (password + Administrator required):
@@ -513,7 +513,7 @@ Password management:
 Examples:
   group-add gaming roblox.com youtube.com twitch.tv
   group-list                      (see who has the lock right now)
-  group-timeout gaming 10         (release lock after 10 min idle)
+  group-timeout gaming 30         (release lock after 30 sec idle)
   group-allow gaming youtube.com  (parent override)
   group-reset gaming              (back to auto mode)
   add facebook.com
